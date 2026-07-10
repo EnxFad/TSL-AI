@@ -6,8 +6,8 @@ Web application for factory production line box inspection using QR scanning, mu
 
 | Service | Port | Tech |
 |---------|------|------|
-| Frontend | 3000 | Next.js + Tailwind CSS |
-| Backend | 3001 | Express + Prisma |
+| Frontend | 3100 | Next.js + Tailwind CSS |
+| Backend | 3101 | Express + Prisma |
 | AI Service | 8000 | Python FastAPI |
 | Database | 1433 | Microsoft SQL Server |
 
@@ -61,7 +61,7 @@ cp .env.local.example .env.local   # if .env.local doesn't exist
 npm run dev
 ```
 
-Open http://localhost:3000
+Open http://localhost:3100
 
 ### iPhone / iPad Testing
 
@@ -77,12 +77,12 @@ npm run dev:iphone
 
 Terminal shows URLs like:
 ```
-- Local:   https://localhost:3000
-- Network: https://192.168.x.x:3000
+- Local:   https://localhost:3100
+- Network: https://192.168.x.x:3100
 ```
 
 **On iPhone (same Wi-Fi):**
-1. Open `https://192.168.x.x:3000` in Safari
+1. Open `https://192.168.x.x:3100` in Safari
 2. Tap **Advanced → Proceed** if certificate warning appears (self-signed dev cert)
 3. Tap camera box → **Allow** camera
 4. Scan QR or **type Lot No** manually
@@ -101,7 +101,7 @@ docker compose up --build
 Then run frontend locally pointing to backend:
 
 ```
-NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_API_URL=http://localhost:3101
 ```
 
 ## API Endpoints

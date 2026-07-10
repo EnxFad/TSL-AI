@@ -5,7 +5,7 @@ import inspectionRouter from "./routes/inspection.js";
 import { ensureUploadDir } from "./services/storage.js";
 
 const app = express();
-const PORT = parseInt(process.env.PORT || "3001", 10);
+const PORT = parseInt(process.env.PORT || "3101", 10);
 
 app.use(cors());
 app.use(express.json());

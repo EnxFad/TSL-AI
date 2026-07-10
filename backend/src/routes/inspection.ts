@@ -25,9 +25,23 @@ router.post("/predict", upload.single("image"), async (req, res) => {
   }
 
   try {
-    const result = await predictImage(req.file.path);
+    const { result, annotated_image } = await predictImage(req.file.path);
+
+    if (result === "NO_DETECTION") {
+      res.json({
+        result,
+        path: "",
+        annotated_image: annotated_image ?? null,
+      });
+      return;
+    }
+
     const savedPath = saveUploadedFile(req.file, "angle");
-    res.json({ result, path: savedPath });
+    res.json({
+      result,
+      path: savedPath,
+      annotated_image: annotated_image ?? null,
+    });
   } catch (error) {
     console.error("Prediction failed:", error);
     res.status(500).json({ error: "Prediction failed" });

@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const backendUrl = process.env.BACKEND_URL || "http://localhost:3001";
+const backendUrl = process.env.BACKEND_URL || "http://localhost:3101";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.trycloudflare.com", "*.ngrok-free.app", "*.ngrok.io"],

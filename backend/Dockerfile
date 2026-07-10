@@ -13,6 +13,6 @@ RUN npm run build
 
 RUN mkdir -p uploads
 
-EXPOSE 3001
+EXPOSE 3101
 
 CMD ["sh", "-c", "npx prisma db push && npx prisma db seed && node dist/index.js"]

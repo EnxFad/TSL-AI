@@ -54,7 +54,12 @@ export default function InspectionPage() {
   const allReady =
     lotNo.trim() !== "" &&
     boxType.trim() !== "" &&
-    angles.every((a) => a.path && a.result && !a.processing);
+    angles.every(
+      (a) =>
+        a.path &&
+        (a.result === "LOCK" || a.result === "UNLOCK") &&
+        !a.processing
+    );
 
   async function handleSubmit() {
     if (!allReady) return;

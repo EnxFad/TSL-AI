@@ -28,5 +28,8 @@ async def health():
 @app.post("/predict")
 async def predict(image: UploadFile = File(...)):
     image_bytes = await image.read()
-    result = predictor.predict(image_bytes)
-    return {"result": result}
+    result, annotated_image = predictor.predict(image_bytes)
+    payload = {"result": result}
+    if annotated_image:
+        payload["annotated_image"] = annotated_image
+    return payload

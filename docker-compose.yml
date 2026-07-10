@@ -26,8 +26,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      AI_MOCK: "true"
+      AI_MOCK: "false"
       MODEL_PATH: "models/box_lock_model.pt"
+      AI_CONF_THRESHOLD: "0.25"
+    volumes:
+      - ./ai-service/models:/app/models
     restart: unless-stopped
     networks:
       - box-inspection-net
@@ -36,10 +39,10 @@ services:
     build: ./backend
     container_name: box-inspection-backend
     ports:
-      - "3001:3001"
+      - "3101:3101"
     environment:
       DATABASE_URL: "sqlserver://mssql:1433;database=box_inspection;user=sa;password=${DB_PASSWORD:-YourStrong!Passw0rd};encrypt=false;trustServerCertificate=true"
-      PORT: "3001"
+      PORT: "3101"
       AI_SERVICE_URL: "http://ai-service:8000"
       UPLOAD_DIR: "uploads"
     volumes:

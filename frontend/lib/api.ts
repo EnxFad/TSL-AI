@@ -8,7 +8,7 @@ function getApiBase(): string {
 
 const API_BASE = getApiBase();
 
-export type InspectionResult = "LOCK" | "UNLOCK";
+export type InspectionResult = "LOCK" | "UNLOCK" | "NO_DETECTION";
 export type OverallResult = "PASS" | "FAIL";
 
 export interface BoxType {
@@ -19,6 +19,7 @@ export interface BoxType {
 export interface PredictResponse {
   result: InspectionResult;
   path: string;
+  annotated_image?: string | null;
 }
 
 export interface ImageEntry {
