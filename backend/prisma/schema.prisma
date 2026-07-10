@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model BoxType {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(50)
+
+  @@map("box_types")
+}
+
+model BoxInspection {
+  id             BigInt   @id @default(autoincrement())
+  lot_no         String   @db.VarChar(50)
+  box_type       String   @db.VarChar(50)
+  image_1        String   @db.VarChar(255)
+  result_1       String   @db.VarChar(10)
+  image_2        String   @db.VarChar(255)
+  result_2       String   @db.VarChar(10)
+  image_3        String   @db.VarChar(255)
+  result_3       String   @db.VarChar(10)
+  image_4        String   @db.VarChar(255)
+  result_4       String   @db.VarChar(10)
+  overall_result String   @db.VarChar(10)
+  created_at     DateTime @default(now()) @db.DateTime2
+
+  @@map("box_inspection")
+}

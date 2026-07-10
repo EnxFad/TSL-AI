@@ -1,0 +1,14 @@
+{
+  "name": "box-inspection",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:frontend:ipad": "npm run dev:mobile --prefix frontend",
+    "dev:iphone": "npm run dev:iphone --prefix frontend",
+    "start:mobile": "npm run start:mobile --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:ai": "cd ai-service && uvicorn main:app --reload --port 8000",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down"
+  }
+}

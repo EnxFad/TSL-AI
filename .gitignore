@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.next/
+uploads/*
+!uploads/.gitkeep
+.env
+.env.local
+.env.*.local
+*.pyc
+__pycache__/
+.venv/
+venv/
+ai-service/models/*.pt
+ai-service/models/*.onnx
+frontend/certificates/
+build-log.txt

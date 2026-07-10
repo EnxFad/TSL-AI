@@ -1,0 +1,64 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    container_name: box-inspection-mssql
+    environment:
+      SA_PASSWORD: "${DB_PASSWORD:-YourStrong!Passw0rd}"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${DB_PASSWORD:-YourStrong!Passw0rd}' -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - box-inspection-net
+
+  ai-service:
+    build: ./ai-service
+    container_name: box-inspection-ai
+    ports:
+      - "8000:8000"
+    environment:
+      AI_MOCK: "true"
+      MODEL_PATH: "models/box_lock_model.pt"
+    restart: unless-stopped
+    networks:
+      - box-inspection-net
+
+  backend:
+    build: ./backend
+    container_name: box-inspection-backend
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: "sqlserver://mssql:1433;database=box_inspection;user=sa;password=${DB_PASSWORD:-YourStrong!Passw0rd};encrypt=false;trustServerCertificate=true"
+      PORT: "3001"
+      AI_SERVICE_URL: "http://ai-service:8000"
+      UPLOAD_DIR: "uploads"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      mssql:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - box-inspection-net
+
+volumes:
+  mssql_data:
+    name: box-inspection-mssql-data
+  uploads_data:
+    name: box-inspection-uploads
+
+networks:
+  box-inspection-net:
+    name: box-inspection-network

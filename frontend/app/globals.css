@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f1f5f9;
+  --foreground: #1e293b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#qr-reader,
+.qr-viewport {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  position: relative !important;
+}
+
+#qr-reader__scan_region {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: unset !important;
+  position: relative !important;
+}
+
+#qr-reader__scan_region video,
+#qr-reader video {
+  object-fit: cover !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  inset: 0 !important;
+  max-width: none !important;
+}
+
+#qr-reader__dashboard,
+#qr-reader__dashboard_section,
+#qr-reader__dashboard_section_csr,
+#qr-reader__dashboard_section_fsr {
+  display: none !important;
+}
+
+#qr-reader__scan_region > img {
+  display: none !important;
+}
