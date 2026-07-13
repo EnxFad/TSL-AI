@@ -77,7 +77,6 @@ export default function QrScanner({
       }
     }
 
-    // Let the browser finish releasing the video element before DOM cleanup
     await new Promise((r) => setTimeout(r, 50));
 
     try {
