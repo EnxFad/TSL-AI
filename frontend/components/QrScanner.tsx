@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
-import { RefreshCw, QrCode } from "lucide-react";
+import { RefreshCw, QrCode, X } from "lucide-react";
 import { parseLotCaseNumber, BoxType, isSecureCameraContext } from "@/lib/api";
 import BoxTypeSelect from "@/components/BoxTypeSelect";
 
@@ -162,22 +162,35 @@ export default function QrScanner({
   return (
     <div className="rounded-2xl border-2 border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex gap-3 items-center">
-        <button
-          type="button"
-          onClick={() => void startScanner()}
-          className="relative w-[9.5rem] aspect-square shrink-0 rounded-xl overflow-hidden bg-slate-100 border-2 border-slate-200 active:bg-slate-200"
-          aria-label="Open camera to scan QR code"
-        >
-          <div id={containerId} className="qr-viewport absolute inset-0 pointer-events-none" />
-          {!scanning && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-100/90 z-10">
-              <QrCode className="w-10 h-10 text-slate-400" />
-              <span className="text-xs font-medium text-slate-500 px-2 text-center leading-tight">
-                {error ? "แตะเพื่อลองใหม่" : "แตะเพื่อสแกน QR"}
-              </span>
-            </div>
+        <div className="relative w-[9.5rem] aspect-square shrink-0 rounded-xl overflow-hidden bg-slate-100 border-2 border-slate-200">
+          <button
+            type="button"
+            onClick={() => void startScanner()}
+            disabled={scanning}
+            className="absolute inset-0 active:bg-slate-200"
+            aria-label="Open camera to scan QR code"
+          >
+            <div id={containerId} className="qr-viewport absolute inset-0 pointer-events-none" />
+            {!scanning && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-100/90 z-10">
+                <QrCode className="w-10 h-10 text-slate-400" />
+                <span className="text-xs font-medium text-slate-500 px-2 text-center leading-tight">
+                  {error ? "แตะเพื่อลองใหม่" : "แตะเพื่อสแกน QR"}
+                </span>
+              </div>
+            )}
+          </button>
+          {scanning && (
+            <button
+              type="button"
+              onClick={() => void stopScanner()}
+              className="absolute top-1 right-1 z-20 rounded-full bg-black/60 p-1 text-white active:bg-black/80"
+              aria-label="Close camera"
+            >
+              <X className="w-4 h-4" />
+            </button>
           )}
-        </button>
+        </div>
 
         <div className="flex-1 flex flex-col gap-2 min-w-0 justify-center">
           <div>

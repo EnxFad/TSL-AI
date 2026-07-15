@@ -20,7 +20,8 @@ export function saveUploadedFile(
   const ext = path.extname(file.originalname) || ".jpg";
   const filename = `${prefix}_${randomUUID()}${ext}`;
   const dest = path.join(dir, filename);
-  fs.renameSync(file.path, dest);
+  fs.copyFileSync(file.path, dest);
+  fs.unlinkSync(file.path);
   return filename;
 }
 
