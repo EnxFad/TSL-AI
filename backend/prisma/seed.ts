@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const boxTypes = ["Type A", "Type B", "Type C"];
+  const boxTypes = ["Gps5", "Cimc", "Gp1", "Nikken", "Aneos"];
 
   for (const name of boxTypes) {
     const existing = await prisma.boxType.findFirst({ where: { name } });

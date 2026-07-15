@@ -24,6 +24,7 @@ function createEmptyAngles(): AngleData[] {
 
 export default function InspectionPage() {
   const [lotNo, setLotNo] = useState("");
+  const [caseNo, setCaseNo] = useState("");
   const [boxType, setBoxType] = useState("");
   const [boxTypes, setBoxTypes] = useState<BoxType[]>([]);
   const [boxTypesLoading, setBoxTypesLoading] = useState(true);
@@ -38,9 +39,11 @@ export default function InspectionPage() {
       .catch(() => {
         // Keep UI usable even if backend is down
         setBoxTypes([
-          { id: 1, name: "Type A" },
-          { id: 2, name: "Type B" },
-          { id: 3, name: "Type C" },
+          { id: 1, name: "Gps5" },
+          { id: 2, name: "Cimc" },
+          { id: 3, name: "Gp1" },
+          { id: 4, name: "Nikken" },
+          { id: 5, name: "Aneos" },
         ]);
       })
       .finally(() => setBoxTypesLoading(false));
@@ -59,7 +62,8 @@ export default function InspectionPage() {
   );
 
   const allReady =
-    lotNo.trim() !== "" &&
+    /^\d{6}$/.test(lotNo) &&
+    /^\d{3}$/.test(caseNo) &&
     boxType.trim() !== "" &&
     angles.every(
       (a) =>
@@ -78,6 +82,7 @@ export default function InspectionPage() {
     try {
       const response = await submitInspection({
         lot_no: lotNo,
+        case_no: caseNo,
         box_type: boxType,
         images: angles.map((a) => ({
           path: a.path,
@@ -87,6 +92,7 @@ export default function InspectionPage() {
       setSubmitResult(response.overall_result);
 
       setLotNo("");
+      setCaseNo("");
       setBoxType("");
       setAngles(createEmptyAngles());
     } catch (err) {
@@ -102,6 +108,8 @@ export default function InspectionPage() {
         <QrScanner
           lotNo={lotNo}
           onLotNoChange={setLotNo}
+          caseNo={caseNo}
+          onCaseNoChange={setCaseNo}
           boxTypes={boxTypes}
           boxType={boxType}
           onBoxTypeChange={setBoxType}

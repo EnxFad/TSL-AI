@@ -49,14 +49,19 @@ router.post("/predict", upload.single("image"), async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const { lot_no, box_type, images } = req.body as {
+  const { lot_no, case_no, box_type, images } = req.body as {
     lot_no?: string;
+    case_no?: string;
     box_type?: string;
     images?: ImageEntry[];
   };
 
-  if (!lot_no?.trim()) {
-    res.status(400).json({ error: "lot_no is required" });
+  if (!/^\d{6}$/.test(lot_no?.trim() ?? "")) {
+    res.status(400).json({ error: "lot_no must be exactly 6 digits" });
+    return;
+  }
+  if (!/^\d{3}$/.test(case_no?.trim() ?? "")) {
+    res.status(400).json({ error: "case_no must be exactly 3 digits" });
     return;
   }
   if (!box_type?.trim()) {
@@ -86,7 +91,8 @@ router.post("/", async (req, res) => {
   try {
     const record = await prisma.boxInspection.create({
       data: {
-        lot_no: lot_no.trim(),
+        lot_no: lot_no!.trim(),
+        case_no: case_no!.trim(),
         box_type: box_type.trim(),
         image_1: images[0].path,
         result_1: images[0].result,
@@ -103,6 +109,7 @@ router.post("/", async (req, res) => {
     res.status(201).json({
       id: record.id.toString(),
       lot_no: record.lot_no,
+      case_no: record.case_no,
       box_type: record.box_type,
       overall_result: record.overall_result,
       created_at: record.created_at,

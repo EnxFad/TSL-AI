@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import { RefreshCw, QrCode } from "lucide-react";
-import { parseLotNumber, BoxType, isSecureCameraContext } from "@/lib/api";
+import { parseLotCaseNumber, BoxType, isSecureCameraContext } from "@/lib/api";
 import BoxTypeSelect from "@/components/BoxTypeSelect";
 
 interface QrScannerProps {
   lotNo: string;
   onLotNoChange: (lotNo: string) => void;
+  caseNo: string;
+  onCaseNoChange: (caseNo: string) => void;
   boxTypes: BoxType[];
   boxType: string;
   onBoxTypeChange: (value: string) => void;
@@ -46,6 +48,8 @@ function isIgnorableScannerError(err: unknown): boolean {
 export default function QrScanner({
   lotNo,
   onLotNoChange,
+  caseNo,
+  onCaseNoChange,
   boxTypes,
   boxType,
   onBoxTypeChange,
@@ -117,7 +121,13 @@ export default function QrScanner({
           aspectRatio: 1,
         },
         (decodedText) => {
-          onLotNoChange(parseLotNumber(decodedText));
+          const parsed = parseLotCaseNumber(decodedText);
+          if (!parsed) {
+            setError("QR ต้องเป็นตัวเลข 9 หลัก");
+            return;
+          }
+          onLotNoChange(parsed.lotNo);
+          onCaseNoChange(parsed.caseNo);
           void stopScanner();
         },
         () => {}
@@ -139,7 +149,7 @@ export default function QrScanner({
     } finally {
       busyRef.current = false;
     }
-  }, [onLotNoChange, stopScanner]);
+  }, [onCaseNoChange, onLotNoChange, stopScanner]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -188,13 +198,23 @@ export default function QrScanner({
 
             <input
               type="text"
-              inputMode="text"
+              inputMode="numeric"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
-              value={lotNo}
-              onChange={(e) => onLotNoChange(e.target.value)}
-              placeholder="สแกน QR หรือพิมพ์ Lot No"
+              maxLength={10}
+              value={caseNo ? `${lotNo}-${caseNo}` : lotNo}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+                onLotNoChange(digits.slice(0, 6));
+                onCaseNoChange(digits.slice(6));
+                setError(
+                  digits.length > 0 && digits.length < 9
+                    ? "กรุณากรอกตัวเลขให้ครบ 9 หลัก"
+                    : null
+                );
+              }}
+              placeholder="ตัวเลข 9 หลัก"
               className="w-full rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-2 min-h-[44px] text-xl font-bold text-slate-800 placeholder:text-base placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:border-solid"
             />
           </div>

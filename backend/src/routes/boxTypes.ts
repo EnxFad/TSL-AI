@@ -5,9 +5,11 @@ const router = Router();
 const prisma = new PrismaClient();
 
 const DEV_FALLBACK_BOX_TYPES = [
-  { id: 1, name: "Type A" },
-  { id: 2, name: "Type B" },
-  { id: 3, name: "Type C" },
+  { id: 1, name: "Gps5" },
+  { id: 2, name: "Cimc" },
+  { id: 3, name: "Gp1" },
+  { id: 4, name: "Nikken" },
+  { id: 5, name: "Aneos" },
 ];
 
 router.get("/", async (_req, res) => {
