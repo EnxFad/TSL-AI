@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Search } from "lucide-react";
+import { ArrowLeft, FileDown, Loader2, Search } from "lucide-react";
 import {
   fetchInspections,
   getImageUrl,
@@ -10,6 +10,7 @@ import {
   InspectionResult,
 } from "@/lib/api";
 import ImageViewerModal from "@/components/ImageViewerModal";
+import PrintableReport, { preloadImages } from "@/components/PrintableReport";
 
 const PAGE_SIZE = 20;
 
@@ -54,6 +55,8 @@ export default function RecordsPage() {
   const [error, setError] = useState<string | null>(null);
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(() => {
     fetchInspections({ lotNo, caseNo, page, pageSize: PAGE_SIZE })
@@ -61,6 +64,7 @@ export default function RecordsPage() {
         setRecords(res.data);
         setTotal(res.total);
         setError(null);
+        setSelectedIds(new Set());
       })
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Failed to load")
@@ -88,8 +92,54 @@ export default function RecordsPage() {
     setPage(next);
   }
 
+  const pageIds = useMemo(() => records.map((r) => r.id), [records]);
+  const allPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const somePageSelected =
+    pageIds.some((id) => selectedIds.has(id)) && !allPageSelected;
+
+  function toggleRow(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      if (pageIds.every((id) => prev.has(id))) {
+        return new Set();
+      }
+      return new Set(pageIds);
+    });
+  }
+
+  const selectedRecords = useMemo(
+    () => records.filter((r) => selectedIds.has(r.id)),
+    [records, selectedIds]
+  );
+
+  async function handleExportPdf() {
+    if (selectedRecords.length === 0 || exporting) return;
+    setExporting(true);
+    try {
+      const urls = selectedRecords.flatMap((r) =>
+        ([1, 2, 3, 4] as const).map((n) => getImageUrl(r[`image_${n}`]))
+      );
+      await preloadImages(urls);
+      // Let React paint PrintableReport imgs before print dialog
+      await new Promise((r) => requestAnimationFrame(() => r(undefined)));
+      window.print();
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const angleColumns: Array<1 | 2 | 3 | 4> = [1, 2, 3, 4];
+  const selectedCount = selectedIds.size;
 
   return (
     <main className="mx-auto w-full max-w-5xl min-h-screen flex flex-col px-4 pt-[env(safe-area-inset-top)] pb-4 bg-slate-100">
@@ -102,7 +152,22 @@ export default function RecordsPage() {
           >
             <ArrowLeft className="w-5 h-5 text-slate-700" />
           </Link>
-          <h1 className="text-xl font-bold text-slate-800">Records</h1>
+          <h1 className="text-xl font-bold text-slate-800 flex-1">Records</h1>
+          {selectedCount > 0 && (
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={exporting}
+              className="flex items-center gap-2 rounded-xl bg-blue-600 text-white font-bold px-4 min-h-[44px] active:bg-blue-700 disabled:opacity-60"
+            >
+              {exporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileDown className="w-4 h-4" />
+              )}
+              Export PDF ({selectedCount})
+            </button>
+          )}
         </div>
 
         <form
@@ -151,6 +216,18 @@ export default function RecordsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b-2 border-slate-200 text-left text-slate-500 uppercase text-xs tracking-wide">
+                  <th className="px-3 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allPageSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = somePageSelected;
+                      }}
+                      onChange={toggleSelectAll}
+                      aria-label="เลือกทั้งหมด"
+                      className="h-4 w-4 accent-blue-600"
+                    />
+                  </th>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Lot No</th>
                   <th className="px-4 py-3">Case No</th>
@@ -169,6 +246,15 @@ export default function RecordsPage() {
                     key={r.id}
                     className="border-b border-slate-100 last:border-0"
                   >
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(r.id)}
+                        onChange={() => toggleRow(r.id)}
+                        aria-label={`เลือก ${r.name}`}
+                        className="h-4 w-4 accent-blue-600"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-semibold text-slate-800">
                       {r.name}
                     </td>
@@ -237,6 +323,8 @@ export default function RecordsPage() {
         imageUrl={viewerImage}
         onClose={() => setViewerImage(null)}
       />
+
+      <PrintableReport records={selectedRecords} />
     </main>
   );
 }

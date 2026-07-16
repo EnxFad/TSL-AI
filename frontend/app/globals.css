@@ -53,3 +53,113 @@ body {
 #qr-reader__scan_region > img {
   display: none !important;
 }
+
+/* ── Print-to-PDF report ─────────────────────────────────────────── */
+
+.printable-report {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .printable-report,
+  .printable-report * {
+    visibility: visible;
+  }
+
+  .printable-report {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    background: white;
+    color: #0f172a;
+  }
+
+  .print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1.5pt solid #cbd5e1;
+    border-radius: 6pt;
+    padding: 10pt;
+    margin-bottom: 12pt;
+  }
+
+  .print-card-header {
+    margin-bottom: 8pt;
+    padding-bottom: 6pt;
+    border-bottom: 1pt solid #e2e8f0;
+  }
+
+  .print-card-title {
+    font-size: 14pt;
+    font-weight: 700;
+    margin-bottom: 4pt;
+  }
+
+  .print-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4pt 12pt;
+    font-size: 9pt;
+    color: #334155;
+  }
+
+  .print-overall-pass {
+    font-weight: 700;
+    color: #15803d;
+  }
+
+  .print-overall-fail {
+    font-weight: 700;
+    color: #b91c1c;
+  }
+
+  .print-angle-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8pt;
+  }
+
+  .print-angle {
+    margin: 0;
+    border: 1pt solid #e2e8f0;
+    border-radius: 4pt;
+    overflow: hidden;
+  }
+
+  .print-angle-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 55mm;
+    object-fit: contain;
+    background: #f8fafc;
+  }
+
+  .print-angle-caption {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3pt 5pt;
+    font-size: 8pt;
+    background: #f1f5f9;
+  }
+
+  .print-badge-lock {
+    font-weight: 700;
+    color: #15803d;
+  }
+
+  .print-badge-unlock {
+    font-weight: 700;
+    color: #b91c1c;
+  }
+}
