@@ -61,6 +61,7 @@ export async function predictImage(file: File): Promise<PredictResponse> {
 }
 
 export async function submitInspection(data: {
+  name: string;
   lot_no: string;
   case_no: string;
   box_type: string;
@@ -70,6 +71,7 @@ export async function submitInspection(data: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      name: data.name,
       lot_no: data.lot_no,
       case_no: data.case_no,
       box_type: data.box_type,
@@ -107,16 +109,18 @@ export function parseLotCaseNumber(qrText: string): LotCaseNumber | null {
   }
 
   const digits = value.replace(/\D/g, "");
-  if (digits.length !== 9) return null;
+  if (digits.length < 9) return null;
 
+  const last9 = digits.slice(-9);
   return {
-    lotNo: digits.slice(0, 6),
-    caseNo: digits.slice(6),
+    lotNo: last9.slice(0, 6),
+    caseNo: last9.slice(6),
   };
 }
 
 export interface InspectionRecord {
   id: string;
+  name: string;
   lot_no: string;
   case_no: string;
   box_type: string;
@@ -158,9 +162,4 @@ export async function fetchInspections(params: {
 
 export function getImageUrl(filename: string): string {
   return `${API_BASE}/api/uploads/${filename}`;
-}
-
-export function isSecureCameraContext(): boolean {
-  if (typeof window === "undefined") return true;
-  return window.isSecureContext;
 }

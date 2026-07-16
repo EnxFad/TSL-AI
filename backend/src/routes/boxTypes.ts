@@ -9,7 +9,8 @@ const DEV_FALLBACK_BOX_TYPES = [
   { id: 2, name: "Cimc" },
   { id: 3, name: "Gp1" },
   { id: 4, name: "Nikken" },
-  { id: 5, name: "Aneos" },
+  { id: 5, name: "Eneos" },
+  { id: 6, name: "Anqing" },
 ];
 
 router.get("/", async (_req, res) => {

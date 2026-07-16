@@ -152,7 +152,8 @@ export default function AngleCapture({ angle, data, onUpdate }: AngleCaptureProp
 
       <CameraCapture
         open={cameraOpen}
-        angle={angle}
+        title={`ถ่ายมุม ${angle}`}
+        fileName={`angle_${angle}`}
         onClose={() => setCameraOpen(false)}
         onCapture={handleFile}
       />

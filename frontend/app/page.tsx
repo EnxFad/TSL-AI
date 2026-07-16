@@ -2,15 +2,25 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ListChecks } from "lucide-react";
+import {
+  Send,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  ListChecks,
+  Pencil,
+  ChevronRight,
+} from "lucide-react";
 import QrScanner from "@/components/QrScanner";
+import NameScanner from "@/components/NameScanner";
+import BoxTypeSelect from "@/components/BoxTypeSelect";
 import AngleCapture, { AngleData } from "@/components/AngleCapture";
-import SubmitBar from "@/components/SubmitBar";
+import AddBar from "@/components/AddBar";
 import {
   fetchBoxTypes,
   submitInspection,
   BoxType,
-  OverallResult,
+  ImageEntry,
 } from "@/lib/api";
 
 const EMPTY_ANGLE: AngleData = {
@@ -24,16 +34,34 @@ function createEmptyAngles(): AngleData[] {
   return [1, 2, 3, 4].map(() => ({ ...EMPTY_ANGLE }));
 }
 
+interface StagedBox {
+  name: string;
+  lot_no: string;
+  case_no: string;
+  box_type: string;
+  images: ImageEntry[];
+}
+
+interface BatchSummary {
+  pass: number;
+  fail: number;
+}
+
 export default function InspectionPage() {
+  const [step, setStep] = useState<"scan" | "capture">("scan");
+
+  const [name, setName] = useState("");
   const [lotNo, setLotNo] = useState("");
   const [caseNo, setCaseNo] = useState("");
   const [boxType, setBoxType] = useState("");
   const [boxTypes, setBoxTypes] = useState<BoxType[]>([]);
   const [boxTypesLoading, setBoxTypesLoading] = useState(true);
   const [angles, setAngles] = useState<AngleData[]>(createEmptyAngles);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitResult, setSubmitResult] = useState<OverallResult | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [batch, setBatch] = useState<StagedBox[]>([]);
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const [batchSummary, setBatchSummary] = useState<BatchSummary | null>(null);
+  const [batchError, setBatchError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBoxTypes()
@@ -45,7 +73,8 @@ export default function InspectionPage() {
           { id: 2, name: "Cimc" },
           { id: 3, name: "Gp1" },
           { id: 4, name: "Nikken" },
-          { id: 5, name: "Aneos" },
+          { id: 5, name: "Eneos" },
+          { id: 6, name: "Anqing" },
         ]);
       })
       .finally(() => setBoxTypesLoading(false));
@@ -58,49 +87,91 @@ export default function InspectionPage() {
         next[index - 1] = { ...next[index - 1], ...data };
         return next;
       });
-      setSubmitResult(null);
     },
     []
   );
 
-  const allReady =
-    /^\d{6}$/.test(lotNo) &&
-    /^\d{3}$/.test(caseNo) &&
-    boxType.trim() !== "" &&
-    angles.every(
-      (a) =>
-        a.path &&
-        (a.result === "LOCK" || a.result === "UNLOCK") &&
-        !a.processing
-    );
+  const scanReady = name.trim() !== "" && boxType.trim() !== "";
 
-  async function handleSubmit() {
-    if (!allReady) return;
+  const lotCaseReady = /^\d{6}$/.test(lotNo) && /^\d{3}$/.test(caseNo);
 
-    setSubmitting(true);
-    setSubmitError(null);
-    setSubmitResult(null);
+  const anglesReady = angles.every(
+    (a) =>
+      a.path &&
+      (a.result === "LOCK" || a.result === "UNLOCK") &&
+      !a.processing
+  );
 
-    try {
-      const response = await submitInspection({
+  const canAdd = lotCaseReady && anglesReady;
+
+  function handleNext() {
+    if (!scanReady) return;
+    setStep("capture");
+  }
+
+  function handleAdd() {
+    if (!canAdd) return;
+
+    setBatch((prev) => [
+      ...prev,
+      {
+        name,
         lot_no: lotNo,
         case_no: caseNo,
         box_type: boxType,
-        images: angles.map((a) => ({
-          path: a.path,
-          result: a.result!,
-        })),
-      });
-      setSubmitResult(response.overall_result);
+        images: angles.map((a) => ({ path: a.path, result: a.result! })),
+      },
+    ]);
+    setBatchSummary(null);
+    setBatchError(null);
 
+    // Keep the same inspector name + box type for the next box in the batch;
+    // only reset the per-box fields and stay on the lot/capture page so the
+    // user can scan the next Lot No right away.
+    setLotNo("");
+    setCaseNo("");
+    setAngles(createEmptyAngles());
+    setStep("capture");
+  }
+
+  async function handleSubmitAll() {
+    if (batch.length === 0) return;
+
+    setBatchSubmitting(true);
+    setBatchError(null);
+
+    const remaining: StagedBox[] = [];
+    let pass = 0;
+    let fail = 0;
+
+    for (const box of batch) {
+      try {
+        const response = await submitInspection(box);
+        if (response.overall_result === "PASS") pass++;
+        else fail++;
+      } catch {
+        remaining.push(box);
+      }
+    }
+
+    setBatch(remaining);
+    setBatchSummary({ pass, fail });
+    setBatchError(
+      remaining.length > 0
+        ? `ส่งไม่สำเร็จ ${remaining.length} กล่อง — ลองใหม่อีกครั้ง`
+        : null
+    );
+    setBatchSubmitting(false);
+
+    if (remaining.length === 0) {
+      // All boxes sent — clear the box type (must be re-selected) and the
+      // per-box fields, then return to the name/type page for the next batch.
+      // The inspector name is kept (clear it manually via the name card).
+      setBoxType("");
       setLotNo("");
       setCaseNo("");
-      setBoxType("");
       setAngles(createEmptyAngles());
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Submit failed");
-    } finally {
-      setSubmitting(false);
+      setStep("scan");
     }
   }
 
@@ -109,47 +180,116 @@ export default function InspectionPage() {
       <div className="flex flex-col gap-4 flex-1 pt-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-slate-800">Box Inspection</h1>
-          <Link
-            href="/records"
-            className="flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 min-h-[40px] text-sm font-semibold text-slate-700 shadow-sm"
-          >
-            <ListChecks className="w-4 h-4" />
-            Records
-          </Link>
+          {step === "scan" ? (
+            <Link
+              href="/records"
+              className="flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 min-h-[40px] text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50"
+            >
+              <ListChecks className="w-4 h-4" />
+              Records
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSubmitAll}
+              disabled={batch.length === 0 || batchSubmitting}
+              className="flex items-center gap-1.5 rounded-xl bg-slate-800 text-white px-3 min-h-[40px] text-sm font-semibold shadow-sm active:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {batchSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              ส่ง ({batch.length})
+            </button>
+          )}
         </div>
 
-        <QrScanner
-          lotNo={lotNo}
-          onLotNoChange={setLotNo}
-          caseNo={caseNo}
-          onCaseNoChange={setCaseNo}
-          boxTypes={boxTypes}
-          boxType={boxType}
-          onBoxTypeChange={setBoxType}
-          boxTypesLoading={boxTypesLoading}
-        />
-
-        <div className="grid grid-cols-2 gap-3">
-          {angles.map((angleData, i) => (
-            <AngleCapture
-              key={i}
-              angle={i + 1}
-              data={angleData}
-              onUpdate={handleAngleUpdate}
-            />
-          ))}
-        </div>
-
-        {submitError && (
-          <p className="text-center text-red-600 font-medium">{submitError}</p>
+        {batchSummary && (
+          <div className="rounded-2xl px-4 py-3 flex items-center justify-center gap-4 text-base font-bold bg-white border-2 border-slate-200">
+            <span className="flex items-center gap-1.5 text-green-700">
+              <CheckCircle2 className="w-5 h-5" />
+              PASS {batchSummary.pass}
+            </span>
+            <span className="flex items-center gap-1.5 text-red-700">
+              <XCircle className="w-5 h-5" />
+              FAIL {batchSummary.fail}
+            </span>
+          </div>
         )}
 
-        <SubmitBar
-          onSubmit={handleSubmit}
-          submitting={submitting}
-          submitResult={submitResult}
-          disabled={!allReady}
-        />
+        {batchError && (
+          <p className="text-center text-red-600 font-medium">{batchError}</p>
+        )}
+
+        {step === "scan" ? (
+          <>
+            <NameScanner name={name} onNameChange={setName} />
+
+            <BoxTypeSelect
+              boxTypes={boxTypes}
+              value={boxType}
+              onChange={setBoxType}
+              loading={boxTypesLoading}
+            />
+
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!scanReady}
+              className="w-full rounded-2xl bg-blue-600 text-white text-xl font-bold py-5 min-h-[64px] active:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
+            >
+              ต่อไป
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="rounded-2xl border-2 border-slate-200 bg-white p-3 shadow-sm flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  ชื่อผู้ตรวจ
+                </p>
+                <p className="text-base font-bold text-slate-800">{name}</p>
+                <p className="mt-1 text-sm font-medium text-slate-600">
+                  {boxType}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep("scan")}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-50 text-blue-600 px-2.5 py-1.5 text-xs font-semibold active:bg-blue-100 shrink-0"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                แก้ไข
+              </button>
+            </div>
+
+            <QrScanner
+              lotNo={lotNo}
+              onLotNoChange={setLotNo}
+              caseNo={caseNo}
+              onCaseNoChange={setCaseNo}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              {angles.map((angleData, i) => (
+                <AngleCapture
+                  key={i}
+                  angle={i + 1}
+                  data={angleData}
+                  onUpdate={handleAngleUpdate}
+                />
+              ))}
+            </div>
+
+            <AddBar
+              onAdd={handleAdd}
+              disabled={!canAdd}
+              count={batch.length}
+            />
+          </>
+        )}
       </div>
     </main>
   );

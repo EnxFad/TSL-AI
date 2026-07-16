@@ -5,21 +5,31 @@ import { Camera, SwitchCamera, X, Loader2 } from "lucide-react";
 
 interface CameraCaptureProps {
   open: boolean;
-  angle: number;
+  title: string;
+  fileName: string;
+  qrGuide?: boolean;
   onClose: () => void;
   onCapture: (file: File) => void;
 }
 
+const FOCUS_SETTLE_MS = 700;
+
 export default function CameraCapture({
   open,
-  angle,
+  title,
+  fileName,
+  qrGuide = false,
   onClose,
   onCapture,
 }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [facingMode, setFacingMode] = useState<"environment" | "user">(
     "environment"
   );
@@ -34,6 +44,7 @@ export default function CameraCapture({
 
     async function startCamera() {
       setError(null);
+      setReady(false);
       setStarting(true);
       stopCamera();
 
@@ -48,8 +59,10 @@ export default function CameraCapture({
           audio: false,
           video: {
             facingMode: { ideal: facingMode },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 2560 },
+            height: { ideal: 1440 },
+            // @ts-expect-error advanced focus constraints aren't in the TS lib yet
+            advanced: [{ focusMode: "continuous" }],
           },
         });
 
@@ -59,10 +72,18 @@ export default function CameraCapture({
         }
 
         streamRef.current = stream;
+        trackRef.current = stream.getVideoTracks()[0] ?? null;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
+
+        // Give autofocus/exposure a beat to settle before the shutter is
+        // usable — grabbing a frame the instant the stream opens is a common
+        // cause of blurry, undecodable QR photos on phone cameras.
+        settleTimerRef.current = setTimeout(() => {
+          if (!cancelled) setReady(true);
+        }, FOCUS_SETTLE_MS);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "ไม่สามารถเปิดกล้องได้";
@@ -80,14 +101,20 @@ export default function CameraCapture({
 
     return () => {
       cancelled = true;
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
       stopCamera();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, facingMode]);
 
   function stopCamera() {
+    if (settleTimerRef.current) {
+      clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
+    }
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    trackRef.current = null;
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -98,30 +125,71 @@ export default function CameraCapture({
     onClose();
   }
 
-  function handleCapture() {
+  function finishCapture(blob: Blob) {
+    const file = new File([blob], `${fileName}_${Date.now()}.jpg`, {
+      type: "image/jpeg",
+    });
+    stopCamera();
+    onCapture(file);
+    onClose();
+  }
+
+  function captureFromVideoFrame() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
 
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Capture the full frame — the on-screen guide (when qrGuide is set) is
+    // just a visual aid for framing, not a crop boundary. Cropping tightly to
+    // it risks cutting off the QR's position-detection corners whenever the
+    // physical code is held larger than the guide box, which breaks decoding.
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
+
     canvas.toBlob(
       (blob) => {
-        if (!blob) return;
-        const file = new File([blob], `angle_${angle}_${Date.now()}.jpg`, {
-          type: "image/jpeg",
-        });
-        stopCamera();
-        onCapture(file);
-        onClose();
+        if (blob) finishCapture(blob);
       },
       "image/jpeg",
-      0.92
+      0.95
     );
+  }
+
+  async function handleCapture() {
+    if (capturing) return;
+    setCapturing(true);
+
+    try {
+      // ImageCapture.takePhoto() asks the camera hardware for an actual still
+      // photo (its own focus/exposure pass, full sensor resolution) instead of
+      // grabbing whatever the live preview frame happens to look like — this
+      // is what makes phone QR photos decodable where a raw video-frame grab
+      // often isn't. Not supported on iOS Safari, hence the fallback below.
+      const ImageCaptureCtor = (
+        window as unknown as {
+          ImageCapture?: new (track: MediaStreamTrack) => {
+            takePhoto: () => Promise<Blob>;
+          };
+        }
+      ).ImageCapture;
+
+      if (ImageCaptureCtor && trackRef.current) {
+        const imageCapture = new ImageCaptureCtor(trackRef.current);
+        const blob = await imageCapture.takePhoto();
+        finishCapture(blob);
+        return;
+      }
+
+      captureFromVideoFrame();
+    } catch {
+      captureFromVideoFrame();
+    } finally {
+      setCapturing(false);
+    }
   }
 
   function toggleFacing() {
@@ -130,10 +198,12 @@ export default function CameraCapture({
 
   if (!open) return null;
 
+  const shutterDisabled = starting || !ready || !!error || capturing;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 text-white">
-        <p className="font-semibold">ถ่ายมุม {angle}</p>
+        <p className="font-semibold">{title}</p>
         <button
           type="button"
           onClick={handleClose}
@@ -153,9 +223,26 @@ export default function CameraCapture({
           className="max-h-full max-w-full object-contain"
         />
 
+        {qrGuide && !starting && !error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
+            <div className="w-[70vmin] max-w-[80%] aspect-square rounded-2xl border-4 border-dashed border-white/80" />
+            <p className="text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-lg">
+              จัดให้ QR อยู่ในกรอบ ใกล้และชัดที่สุด
+            </p>
+          </div>
+        )}
+
         {starting && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <Loader2 className="w-10 h-10 text-white animate-spin" />
+          </div>
+        )}
+
+        {!starting && !ready && !error && (
+          <div className="absolute bottom-3 inset-x-0 flex justify-center pointer-events-none">
+            <p className="text-white text-xs font-medium bg-black/50 px-3 py-1 rounded-lg">
+              กำลังปรับโฟกัส...
+            </p>
           </div>
         )}
 
@@ -179,12 +266,16 @@ export default function CameraCapture({
 
         <button
           type="button"
-          onClick={handleCapture}
-          disabled={starting || !!error}
+          onClick={() => void handleCapture()}
+          disabled={shutterDisabled}
           className="w-20 h-20 rounded-full border-4 border-white bg-white/90 active:scale-95 disabled:opacity-40 flex items-center justify-center"
           aria-label="ถ่ายรูป"
         >
-          <Camera className="w-8 h-8 text-slate-800" />
+          {capturing ? (
+            <Loader2 className="w-8 h-8 text-slate-800 animate-spin" />
+          ) : (
+            <Camera className="w-8 h-8 text-slate-800" />
+          )}
         </button>
 
         <div className="w-12 h-12" />

@@ -16,6 +16,7 @@ model BoxType {
 
 model BoxInspection {
   id             BigInt   @id @default(autoincrement())
+  name           String   @db.NVarChar(100)
   lot_no         String   @db.VarChar(6)
   case_no        String   @db.VarChar(3)
   box_type       String   @db.VarChar(50)

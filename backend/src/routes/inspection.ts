@@ -46,6 +46,7 @@ router.get("/", async (req, res) => {
     res.json({
       data: records.map((r) => ({
         id: r.id.toString(),
+        name: r.name,
         lot_no: r.lot_no,
         case_no: r.case_no,
         box_type: r.box_type,
@@ -101,13 +102,18 @@ router.post("/predict", upload.single("image"), async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const { lot_no, case_no, box_type, images } = req.body as {
+  const { name, lot_no, case_no, box_type, images } = req.body as {
+    name?: string;
     lot_no?: string;
     case_no?: string;
     box_type?: string;
     images?: ImageEntry[];
   };
 
+  if (!name?.trim()) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
   if (!/^\d{6}$/.test(lot_no?.trim() ?? "")) {
     res.status(400).json({ error: "lot_no must be exactly 6 digits" });
     return;
@@ -143,6 +149,7 @@ router.post("/", async (req, res) => {
   try {
     const record = await prisma.boxInspection.create({
       data: {
+        name: name.trim(),
         lot_no: lot_no!.trim(),
         case_no: case_no!.trim(),
         box_type: box_type.trim(),
@@ -160,6 +167,7 @@ router.post("/", async (req, res) => {
 
     res.status(201).json({
       id: record.id.toString(),
+      name: record.name,
       lot_no: record.lot_no,
       case_no: record.case_no,
       box_type: record.box_type,

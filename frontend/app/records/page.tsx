@@ -151,6 +151,7 @@ export default function RecordsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b-2 border-slate-200 text-left text-slate-500 uppercase text-xs tracking-wide">
+                  <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Lot No</th>
                   <th className="px-4 py-3">Case No</th>
                   <th className="px-4 py-3">Box Type</th>
@@ -168,6 +169,9 @@ export default function RecordsPage() {
                     key={r.id}
                     className="border-b border-slate-100 last:border-0"
                   >
+                    <td className="px-4 py-3 font-semibold text-slate-800">
+                      {r.name}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-slate-800">
                       {r.lot_no}
                     </td>
