@@ -98,11 +98,7 @@ API calls go through Next.js proxy (`/api/*` → backend) — no separate backen
 docker compose up --build
 ```
 
-Then run frontend locally pointing to backend:
-
-```
-NEXT_PUBLIC_API_URL=http://localhost:3101
-```
+Runs everything — MSSQL, AI service, backend, and frontend — in containers on a shared Docker network. Open http://localhost:3100.
 
 ## API Endpoints
 

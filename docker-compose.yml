@@ -56,6 +56,22 @@ services:
     networks:
       - box-inspection-net
 
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: "http://backend:3101"
+    container_name: box-inspection-frontend
+    ports:
+      - "3100:3100"
+    environment:
+      BACKEND_URL: "http://backend:3101"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - box-inspection-net
+
 volumes:
   mssql_data:
     name: box-inspection-mssql-data
