@@ -10,12 +10,13 @@ const PORT = parseInt(process.env.PORT || "3101", 10);
 app.use(cors());
 app.use(express.json());
 
-ensureUploadDir();
+const uploadDir = ensureUploadDir();
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/api/uploads", express.static(uploadDir));
 app.use("/api/box-types", boxTypesRouter);
 app.use("/api/inspection", inspectionRouter);
 

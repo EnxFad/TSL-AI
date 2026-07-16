@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { ListChecks } from "lucide-react";
 import QrScanner from "@/components/QrScanner";
 import AngleCapture, { AngleData } from "@/components/AngleCapture";
 import SubmitBar from "@/components/SubmitBar";
@@ -105,6 +107,17 @@ export default function InspectionPage() {
   return (
     <main className="mx-auto w-full max-w-[768px] min-h-screen flex flex-col px-4 pt-[env(safe-area-inset-top)] pb-4 bg-slate-100">
       <div className="flex flex-col gap-4 flex-1 pt-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-slate-800">Box Inspection</h1>
+          <Link
+            href="/records"
+            className="flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 min-h-[40px] text-sm font-semibold text-slate-700 shadow-sm"
+          >
+            <ListChecks className="w-4 h-4" />
+            Records
+          </Link>
+        </div>
+
         <QrScanner
           lotNo={lotNo}
           onLotNoChange={setLotNo}

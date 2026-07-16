@@ -115,6 +115,51 @@ export function parseLotCaseNumber(qrText: string): LotCaseNumber | null {
   };
 }
 
+export interface InspectionRecord {
+  id: string;
+  lot_no: string;
+  case_no: string;
+  box_type: string;
+  image_1: string;
+  result_1: InspectionResult;
+  image_2: string;
+  result_2: InspectionResult;
+  image_3: string;
+  result_3: InspectionResult;
+  image_4: string;
+  result_4: InspectionResult;
+  overall_result: OverallResult;
+  created_at: string;
+}
+
+export interface InspectionListResponse {
+  data: InspectionRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function fetchInspections(params: {
+  lotNo?: string;
+  caseNo?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<InspectionListResponse> {
+  const search = new URLSearchParams();
+  if (params.lotNo) search.set("lot_no", params.lotNo);
+  if (params.caseNo) search.set("case_no", params.caseNo);
+  search.set("page", String(params.page ?? 1));
+  search.set("pageSize", String(params.pageSize ?? 20));
+
+  const res = await fetch(`${API_BASE}/api/inspection?${search.toString()}`);
+  if (!res.ok) throw new Error("Failed to fetch inspections");
+  return res.json();
+}
+
+export function getImageUrl(filename: string): string {
+  return `${API_BASE}/api/uploads/${filename}`;
+}
+
 export function isSecureCameraContext(): boolean {
   if (typeof window === "undefined") return true;
   return window.isSecureContext;
