@@ -9,7 +9,9 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 Result = Literal["LOCK", "UNLOCK", "NO_DETECTION"]
 
 CLASS_TO_RESULT: dict[str, Result] = {
+    "lock": "LOCK",
     "locked": "LOCK",
+    "unlock": "UNLOCK",
     "unlocked": "UNLOCK",
 }
 
@@ -38,10 +40,16 @@ class BoxLockPredictor:
 
     def _validate_model_classes(self) -> None:
         names = {str(name).lower() for name in self.model.names.values()}
-        missing = set(CLASS_TO_RESULT) - names
-        if missing:
+        unknown = names - set(CLASS_TO_RESULT)
+        if unknown:
             raise ValueError(
-                f"Model classes {sorted(names)} missing expected labels: {sorted(missing)}"
+                f"Model has unrecognized classes {sorted(unknown)}; "
+                f"expected names among {sorted(CLASS_TO_RESULT)}"
+            )
+        results = {CLASS_TO_RESULT[n] for n in names}
+        if not {"LOCK", "UNLOCK"} <= results:
+            raise ValueError(
+                f"Model classes {sorted(names)} must cover both LOCK and UNLOCK"
             )
 
     def predict(self, image_bytes: bytes) -> tuple[Result, str | None]:
@@ -83,7 +91,11 @@ class BoxLockPredictor:
                     boxes.xyxy.tolist(),
                 ):
                     name = str(result.names[int(class_id)]).lower()
-                    color = COLOR_UNLOCK if name == "unlocked" else COLOR_LOCK
+                    color = (
+                        COLOR_UNLOCK
+                        if CLASS_TO_RESULT.get(name) == "UNLOCK"
+                        else COLOR_LOCK
+                    )
                     x1, y1, x2, y2 = [int(v) for v in xyxy]
                     thickness = max(3, (x2 - x1) // 40)
                     for i in range(thickness):
@@ -126,14 +138,16 @@ class BoxLockPredictor:
         if boxes is None or len(boxes) == 0:
             return "NO_DETECTION"
 
-        detected: set[str] = set()
+        detected: set[Result] = set()
         for class_id in boxes.cls.tolist():
             name = str(result.names[int(class_id)]).lower()
-            detected.add(name)
+            mapped = CLASS_TO_RESULT.get(name)
+            if mapped:
+                detected.add(mapped)
 
-        if "unlocked" in detected:
+        if "UNLOCK" in detected:
             return "UNLOCK"
-        if "locked" in detected:
+        if "LOCK" in detected:
             return "LOCK"
         return "NO_DETECTION"
 
